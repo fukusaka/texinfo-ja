@@ -15,10 +15,12 @@
 %% 96.1.16 modified by J.Sato <jun@svgw.rd.casio.co.jp>
 %%      index with [] of @deffn.
 %% 99.6.27 modified by Moimoi <fukusaka@xa2.so-net.ne.jp>
-%%	for texinfo.tex 1999-05-25.6
+%%	for texinfo 1999-05-25.6
 %% 2000.2.23 modified by Moimoi <fukusaka@xa2.so-net.ne.jp>
 %%	for texinfo.tex 1999-09-25.10
-
+%% 2000.4.11 modified by Moimoi <fukusaka@xa2.so-net.ne.jp>
+%%      for texinfo.tex 1999-09-25.10
+%%      fixed for jTeX/pTeX/MulTeX
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 92.7.8 by K.Handa
 \newif\ifNTT
@@ -36,16 +38,27 @@
 \NTTOLDfalse
 \fi
 \fi
-%% end of patch
+
+\newif\ifMULTEX
+\ifx\mlbaseversion\undefined
+\MULTEXfalse
+\else
+\MULTEXtrue
+\fi
 
 %% TeX macros to handle Japanese texinfo files
 %% 92/05/24 merged jtexinfo.tex (by H. Isozaki and N. Hikichi) into this
 %% Created by Satoru Tomura (tomura@etl.go.jp)
 
-\def\texinfoJPversion{2.145J.2+}
+\def\texinfoJPversion{2.145J.2+++}
+%% これはどう変えるのがいいのかなぁ
 
 \ifNTT
+\ifMULTEX
+\message{txi-ja (Multi-Lingual TeX) package [Version \texinfoJPversion]:}
+\else
 \message{txi-ja (NTT JTeX) package [Version \texinfoJPversion]:}
+\fi
 \else
 \message{txi-ja (ASCII JTeX) package [Version \texinfoJPversion]:}
 \fi
@@ -138,6 +151,7 @@
 %\global\hoffset = -0.2in
 %}
 
+% 日本人好きのギッシリ詰まった紙
 % hack please !!
 \global\def\afourbook{{\globaldefs = 1
   \setleading{12pt}%
@@ -183,12 +197,87 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 日本語フォントに関する互換性
+%
+% Debian/Linux でパッケージ化されている
+%  NTT jTeX / ASCII pTeX / MulTeX(日本語限定) のみ考慮している。
+% (他のサイトの日本語TeXも同様だと期待してる、、、)
+%
+% xdvi/jdvi2kps で使っている vf の種類は 5,6,7,8,9,10/min,goth 。
+%
+
 \ifNTT
-\global\kanjifiletype=20
-\global\let\min=\dm\global\let\dg=\goth
+%\global\kanjifiletype=20 % ??
+\global\let\min=\dm\global\let\goth=\dg
 \else
-\global\let\dm=\min\global\let\goth=\dg
+\global\let\dm=\min\global\let\dg=\goth
 \fi
+
+\def\uniJFont{%
+\ifNTT%
+\ifNTTOLD                       % 92.7.8 by K.Handa
+\let\next=\jTeXoldJFont%
+\else
+\ifMULTEX
+\let\next=\MulTeXJFont%
+\else
+\let\next=\jTeXJFont%
+\fi
+\fi
+\else%
+\let\next=\pTeXJFont%
+\fi%
+\next}
+
+\def\jTeXoldJFont#1#2#3#4{%
+\def\tempa{#2}
+\def\tempb{dm}
+\ifx\tempa\tempb% dm
+\expandafter\gjfont\csname#1\endcsname=dm#3 scaled {#4}%
+\else% dg
+\expandafter\gjfont\csname#1\endcsname=dg#3 scaled {#4}%
+\fi%
+}
+
+% backward compatibility for JTeX で \gjfont が無いとは MulTeX め。
+
+\def\MulTeXJFont#1#2#3#4{%
+\def\tempa{#2}
+\def\tempb{dm}
+{\globaldefs=1%
+\ifx\tempa\tempb% dm
+\expandafter\jfont\csname#1\endcsname=dm#3 scaled #4%
+\else% dg
+\expandafter\jfont\csname#1\endcsname=dg#3 scaled #4%
+\fi}%
+}
+
+\def\jTeXJFont#1#2#3#4{%
+\def\tempa{#2}
+\def\tempb{dm}
+\ifx\tempa\tempb% dm
+\expandafter\gjfont\csname#1\endcsname=dm#3 scaled #4%
+\else% dg
+\expandafter\gjfont\csname#1\endcsname=dg#3 scaled #4%
+\fi%
+}
+
+\def\pTeXJFont#1#2#3#4{%
+\def\tempa{#2}
+\def\tempb{dm}
+\ifx\tempa\tempb% dm
+\global\expandafter\font\csname#1\endcsname=min#3 scaled #4%
+\else% dg
+\global\expandafter\font\csname#1\endcsname=goth#3 scaled #4%
+\fi
+}
+
+%
+% 日本語フォントの定義
+%
+
+%% Fonts for text (10pt)
+\uniJFont{textdm}{dm}{10}{1000}
+\uniJFont{textdg}{dg}{10}{1000}
 
 \global\setfont\textrm\rmshape{10}{1000}
 \global\setfont\texttt\ttshape{10}{1000}
@@ -197,85 +286,32 @@
 \global\setfont\textsl\slshape{10}{1000}
 \global\setfont\textsf\sfshape{10}{1000}
 \global\setfont\textsc\scshape{10}{1000}
+\global\setfont\textttsl\ttslshape{10}{1000}
 \global\font\texti=cmmi10
+\global\font\textsy=cmsy10
 
-%% 日本語フォントの定義
-%% Fonts for text
-\ifNTT
-\ifNTTOLD                       % 92.7.8 by K.Handa
-\global\jfont\textdm=dm10 scaled {\magstephalf}
-\global\jfont\textdg=dg10 scaled {\magstephalf}
-\global\jfont\shortcontdm=dm10 scaled {\magstep1}
-\global\jfont\shortcontdg=dg10 scaled {\magsteph1}
-\else
-%\jfont\textdm=dm10 scaled \magstephalf
-%\jfont\textdg=dg10 scaled \magstephalf
-%\jfont\shortcontdm=dm10 scaled \magstephalf
-\global\jfont\textdm=dm10
-\global\jfont\textdg=dg10
-\global\jfont\shortcontdm=dm12
-\global\jfont\shortcontdg=dg12
-\fi
-\else
-%\font\textdm=min10 scaled \magstephalf
-%\font\textdg=goth10 scaled \magstephalf
-%\jfont\shortcontdm=min10 scaled \magstephalf
-\global\font\textdm=min10
-\global\font\textdg=goth10
-\global\jfont\shortcontdm=min10 scaled \magstep1
-\global\jfont\shortcontdg=goth10 scaled \magstep1
-\fi
+%% Fonts for shortcontext (12pt)
+\uniJFont{shortcontdm}{dm}{10}{\magstep1}
+\uniJFont{shortcontdg}{dg}{10}{\magstep1}
 
-%% Fonts for title
-\ifNTT
-\global\jfont\titledm=dg12 scaled \magstep3
-\else
-%\font\titledm=goth12 scaled \magstep3
-\global\font\titledm=goth10 scaled \magstep4
-\fi
+%% Fonts for title (20.74pt)
+\uniJFont{titledm}{dg}{10}{\magstep4}
 
 %% Fonts for indics and small examples
-\ifNTT
-\global\jfont\smalldm=dm9
-\global\jfont\smalldg=dm9
-\else
-\global\font\smalldm=min9
-\global\font\smalldg=min9
-\fi
+\uniJFont{smalldm}{dm}{9}{1000}
+\uniJFont{smalldg}{dg}{9}{1000}
 
-%% Fonts for headings
-\ifNTT
-\global\jfont\chapdm=dg12 scaled \magstep2
-\else
-%\font\chapdm=min12 scaled \magstep2
-\global\font\chapdm=goth10 scaled \magstep3
-\fi
-\global\let\chapdg=\chapdm
+%% Fonts for headings (17.28pt)
+\uniJFont{chapdm}{dg}{10}{\magstep3}
+\uniJFont{chapdg}{dg}{10}{\magstep3}
 
-\ifNTT
-\global\jfont\secdm=dg12 scaled \magstep1
-\global\jfont\secdg=dg12 scaled \magstep1
-\else
-%\font\secdm=min12 scaled \magstep1
-\global\font\secdm=goth10 scaled \magstep2
-%\font\secdg=goth12 scaled \magstep1
-\global\font\secdg=goth10 scaled \magstep2
-\fi
+%% Fonts for sections (14.40pt)
+\uniJFont{secdm}{dm}{10}{\magstep2}
+\uniJFont{secdg}{dg}{10}{\magstep2}
 
-\ifNTT
-\ifNTTOLD                       % 92.7.8 by K.Handa
-\global\jfont\ssecdm=dg12 scaled {\magstephalf}
-\global\jfont\ssecdg=dg12 scaled {\magstephalf}
-\else
-\global\jfont\ssecdm=dg12 scaled \magstephalf
-\global\jfont\ssecdg=dg12 scaled \magstephalf
-\fi
-\else
-%\font\ssecdm=goth12 scaled \magstephalf
-\global\font\ssecdm=goth10 at 13pt
-%\font\ssecdg=goth12 scaled \magstephalf
-\global\font\ssecdg=goth10 at 13pt
-\fi
+%% Fonts for subsections (13.15pt)
+\uniJFont{ssecdm}{dm}{10}{1315}
+\uniJFont{ssecdg}{dg}{10}{1315}
 
 % 95.11.2 by K.Handa
 % Reduce Overfull/Underfull \hbox by relaxing these glues.
@@ -284,134 +320,143 @@
 \global\jasciikanjiskip=2.28854pt plus 0.5pt minus -0.2pt
 \fi
 
+%%%%
+
 %% (^^;)
-\global\def\tendm{}
-\global\def\tendg{}
+%\global\def\tendm{}
+%\global\def\tendg{}
 
 %% Re-definitions
-\def\addjfont#1#2{
-\global\cslet{orig#1}{#1}
-\global\expandafter\def\csname#1\endcsname{\csname orig#1\endcsname\csname #2\endcsname}}
+\gdef\addjfont#1#2{%
+\cslet{orig#1}{#1}%
+\expandafter\def\csname#1\endcsname{\csname orig#1\endcsname\csname #2\endcsname}%
+}
 
-\def\addjfonts#1#2{
-\global\cslet{orig#1fonts}{#1fonts}
-\global\expandafter\def\csname#1fonts\endcsname
-{\cslet{tendm}{#2dm}\cslet{tendg}{#2dg}\csname orig#1fonts\endcsname}}
+\def\gaddjfont#1#2{{\globaldefs=1\addjfont{#1}{#2}}}
 
-\addjfont{rm}{tendm}
-\addjfont{bf}{tendg}
-\addjfont{sl}{tendg}
-\addjfont{authorrm}{secdm}
+\def\gaddjfonts#1#2{{\globaldefs=1%
+\cslet{orig#1fonts}{#1fonts}%
+\expandafter\def\csname#1fonts\endcsname{\csname orig#1fonts\endcsname\cslet{tendm}{#2dm}\cslet{tendg}{#2dg}}%
+}}
 
-\addjfonts{text}{text}
-\addjfonts{title}{title}
-\addjfonts{chap}{chap}
-\addjfonts{sec}{sec}
-\addjfonts{subsec}{ssec}
-\addjfonts{small}{small}
+\gaddjfont{rm}{tendm}
+\gaddjfont{bf}{tendg}
+\gaddjfont{sl}{tendg}
+\gaddjfont{authorrm}{secdm}
 
-\global\let\subsubsecfonts=\subsecfonts
+\gaddjfonts{text}{text}
+\gaddjfonts{title}{title}
+\gaddjfonts{chap}{chap}
+\gaddjfonts{sec}{sec}
+\gaddjfonts{subsec}{ssec}
+\gaddjfonts{small}{small}
+
+\global\let\subsubsecfonts = \subsecfonts
 \global\let\subsecentryfonts = \textfonts
 \global\let\subsubsecentryfonts = \textfonts
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% Utility routines.
+%%
 
-\global\def\initial#1{{%
-  % Some minor font changes for the special characters.
-  %\let\tentt=\sectt \let\tt=\sectt \let\sf=\sectt
-  %
-  % Remove any glue we may have, we'll be inserting our own.
-  \removelastskip
-  %
-  % We like breaks before the index initials, so insert a bonus.
-  \penalty -300
-  %
-  % Typeset the initial.  Making this add up to a whole number of
-  % baselineskips increases the chance of the dots lining up from column
-  % to column.  It still won't often be perfect, because of the stretch
-  % we need before each entry, but it's better.
-  %
-  % No shrink because it confuses \balancecolumns.
-  \vskip 1.67\baselineskip plus .5\baselineskip
-  %\leftline{\secbf\secdg #1}%
-  \leftline{\secfonts\bf #1}%
-  \vskip .33\baselineskip plus .1\baselineskip
-  %
-  % Do our best not to break after the initial.
-  \nobreak
-}}
-
-% \shortcontfonts ...
-\global\def\shortchaplabel#1{%
-  % Compute width of word "Appendix", may change with language.
-  \setbox0 = \hbox{\shortcontrm\shortcontdm \putwordAppendix}%
-  \shortappendixwidth = \wd0
-  %
-  % We typeset #1 in a box of constant width, regardless of the text of
-  % #1, so the chapter titles will come out aligned.
-  \setbox0 = \hbox{#1}%
-  \dimen0 = \ifdim\wd0 > \shortappendixwidth \shortappendixwidth \else 0pt \fi
-  %
-  % This space should be plenty, since a single number is .5em, and the
-  % widest letter (M) is 1em, at least in the Computer Modern fonts.
-  % (This space doesn't include the extra space that gets added after
-  % the label; that gets put in by \shortchapentry above.)
-  \advance\dimen0 by 1.1em
-  \hbox to \dimen0{#1\hfil}%
+\def\gaddsequence#1{%
+\if#1[%]
+\def\next{\gaddsequencez#1}%
+\else%
+\def\next{\gaddsequencez[0]{#1}}%
+\fi%
+\next%
 }
 
-% And just the chapters.
-\global\def\summarycontents{%
-   \startcontents{\putwordShortTOC}%
-      %
-      \let\chapentry = \shortchapentry
-      \let\unnumbchapentry = \shortunnumberedentry
-      % We want a true roman here for the page numbers.
-      \secfonts
-      \def\rm{\shortcontrm\shortcontdm}
-      \def\bf{\shortcontbf\shortcontdg}
-      \def\sl{\shortcontsl\shortcontdg}
-      \rm
-      \hyphenpenalty = 10000
-      \advance\baselineskip by 1pt % Open it up a little.
-      \def\secentry ##1##2##3##4{}
-      \def\unnumbsecentry ##1##2{}
-      \def\subsecentry ##1##2##3##4##5{}
-      \def\unnumbsubsecentry ##1##2{}
-      \def\subsubsecentry ##1##2##3##4##5##6{}
-      \def\unnumbsubsubsecentry ##1##2{}
-      \openin 1 \jobname.toc
-      \ifeof 1 \else
-        \closein 1
-        \input \jobname.toc
-      \fi
-     \vfill \eject
-     \contentsalignmacro % in case @setchapternewpage odd is in effect
-   \endgroup
-   \lastnegativepageno = \pageno
-   \pageno = \savepageno
+\def\gaddsequencez[#1]#2{%
+\if#2[%]
+\def\next{\gaddsequencezz[#1]#2}%
+\else%
+\def\next{\gaddsequencezz[#1][lb]{#2}}%
+\fi%
+\next%
+}
+
+\newif\ifL\newif\ifB
+\def\aslb{\Ltrue\Btrue}
+\def\asla{\Ltrue\Bfalse}
+\def\asgb{\Lfalse\Btrue}
+\def\asga{\Lfalse\Bfalse}
+
+%%
+%% 汚いマクロだなぁ〜
+%%
+
+\def\gaddsequencezz[#1][#2]#3#4{%
+\global\cslet{orig#3}{#3}%
+\csname as#2\endcsname%
+\ifcase#1%
+\ifL
+ \ifB
+  \expandafter\gdef\csname#3\endcsname{{#4\csname orig#3\endcsname}}%
+ \else
+  \expandafter\gdef\csname#3\endcsname{{\csname orig#3\endcsname#4}}%
+ \fi
+\else
+ \ifB
+  \expandafter\gdef\csname#3\endcsname{#3\csname orig#3\endcsname}%
+ \else
+  \expandafter\gdef\csname#3\endcsname{\csname orig#3\endcsname#3}%
+ \fi
+\fi
+\or
+\ifL
+ \ifB
+  \expandafter\gdef\csname#3\endcsname##1{{#4\csname orig#3\endcsname{##1}}}%
+ \else
+  \expandafter\gdef\csname#3\endcsname##1{{\csname orig#3\endcsname{##1}#4}}%
+ \fi
+\else
+ \ifB
+  \expandafter\gdef\csname#3\endcsname##1{#4\csname orig#3\endcsname{##1}}%
+ \else
+  \expandafter\gdef\csname#3\endcsname##1{\csname orig#3\endcsname{##1}#4}%
+ \fi
+\fi
+\fi
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\gaddsequence[1]{initial}{%
+\addjfont{secbf}{secdg}%
+}
+
+\gaddsequence{summarycontents}{%
+\addjfont{shortcontrm}{shortcontdm}%
+\addjfont{shortcontbf}{shortcontdg}%
+\addjfont{shortcontsl}{shortcontdg}%
 }
 \global\let\shortcontents = \summarycontents
 
-\global\def\shorttitlepagezzz #1{\begingroup\hbox{}\vskip 1.5in \chaprm\chapdm \centerline{#1}%
-        \endgroup\page\hbox{}\page}
+\gaddsequence{shorttitlepagezzz}{%
+\addjfont{chaprm}{chapdm}%
+}
 
+%%
+%%
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\global\def\thischapterspace{\hskip \SETthischapterspace em}
+\set thischapterspace 1
 
-\global\def\thischapterspace{\hskip 1em}
-
-\global\let\origchapterzzz = \chapterzzz
-\global\def\chapterzzz #1{%
-\origchapterzzz{#1}%
+\gaddsequence[1][ga]{chapterzzz}{%
 \xdef\thischapter{第\the\chapno\putwordChapter{}\thischapterspace\noexpand\thischaptername}%
 }
 
-\global\let\origappendixzzz = \appendixzzz
-\global\def\appendixzzz #1{%
-\origappendixzzz{#1}%
+\gaddsequence[1][ga]{appendixzzz}{%
 \xdef\thischapter{\putwordAppendix{}\appendixletter\thischapterspace\noexpand\thischaptername}%
 }
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%%
+%%
 
 \global\def\inforefzzz #1,#2,#3,#4**{\putwordInfo{}\putwordfile{} \file{\ignorespaces #3{}},  ノード\samp{\ignorespaces#1{}}\putwordSee{}}
 
