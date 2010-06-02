@@ -5439,9 +5439,11 @@ end
       \gdef\noexpand\thischapternum{\appendixletter}%
       % \noexpand\putwordAppendix avoids expanding indigestible
       % commands in some of the translations.
-      \gdef\noexpand\thischapter{\noexpand\putwordAppendix{}
-                                 \noexpand\thischapternum:
-                                 \noexpand\thischaptername}%
+      %\gdef\noexpand\thischapter{\noexpand\putwordAppendix{}
+      %                           \noexpand\thischapternum:
+      %                           \noexpand\thischaptername}%
+      \gdef\noexpand\thischapter{\printheadingappendix{\noexpand\thischapternum}%
+                                                      {\noexpand\thischaptername}}%
     }%
   \else
     \toks0={#1}%
@@ -5450,9 +5452,11 @@ end
       \gdef\noexpand\thischapternum{\the\chapno}%
       % \noexpand\putwordChapter avoids expanding indigestible
       % commands in some of the translations.
-      \gdef\noexpand\thischapter{\noexpand\putwordChapter{}
-                                 \noexpand\thischapternum:
-                                 \noexpand\thischaptername}%
+      %\gdef\noexpand\thischapter{\noexpand\putwordChapter{}
+      %                           \noexpand\thischapternum:
+      %                           \noexpand\thischaptername}%
+      \gdef\noexpand\thischapter{\printheadingchapter{\noexpand\thischapternum}%
+                                                     {\noexpand\thischaptername}}%
     }%
   \fi\fi\fi
   %
@@ -5596,9 +5600,11 @@ end
           \gdef\noexpand\thissectionnum{#4}%
           % \noexpand\putwordSection avoids expanding indigestible
           % commands in some of the translations.
-          \gdef\noexpand\thissection{\noexpand\putwordSection{}
-                                     \noexpand\thissectionnum:
-                                     \noexpand\thissectionname}%
+          %\gdef\noexpand\thissection{\noexpand\putwordSection{}
+          %                           \noexpand\thissectionnum:
+          %                           \noexpand\thissectionname}%
+          \gdef\noexpand\thissection{\printheadingsection{\noexpand\thissectionnum}%
+                                                         {\noexpand\thissectionname}}%
         }%
       \fi
     \else
@@ -5609,9 +5615,11 @@ end
           \gdef\noexpand\thissectionnum{#4}%
           % \noexpand\putwordSection avoids expanding indigestible
           % commands in some of the translations.
-          \gdef\noexpand\thissection{\noexpand\putwordSection{}
-                                     \noexpand\thissectionnum:
-                                     \noexpand\thissectionname}%
+          %\gdef\noexpand\thissection{\noexpand\putwordSection{}
+          %                           \noexpand\thissectionnum:
+          %                           \noexpand\thissectionname}%
+          \gdef\noexpand\thissection{\printheadingsection{\noexpand\thissectionnum}%
+                                                         {\noexpand\thissectionname}}%
         }%
       \fi
     \fi\fi\fi
@@ -5696,6 +5704,10 @@ end
   \penalty 10001
 }
 
+% for localization hook point
+\def\printheadingchapter#1#2{\noexpand\putwordChapter{}#1: #2}
+\def\printheadingsection#1#2{\noexpand\putwordSection{}#1: #2}
+\def\printheadingappendix#1#2{\noexpand\putwordAppendix{}#1: #2}
 
 \message{toc,}
 % Table of contents.
@@ -7319,7 +7331,8 @@ end
     % if the user also gave the printed manual name (fifth arg), append
     % "in MANUALNAME".
     \ifdim \wd1 > 0pt
-      \space \putwordin{} \cite{\printedmanual}%
+      %\space \putwordin{} \cite{\printedmanual}%
+      \xrefprintinmanual{\printedmanual}
     \fi
   \else
     % node/anchor (non-float) references.
@@ -7331,8 +7344,10 @@ end
     % is a loss.  Therefore, we give the text of the node name again, so it
     % is as if TeX is seeing it for the first time.
     \ifdim \wd1 > 0pt
-      \putwordSection{} ``\printedrefname'' \putwordin{} \cite{\printedmanual}%
+      %\putwordSection{} ``\printedrefname'' \putwordin{} \cite{\printedmanual}%
+      \xrefprintxrefinmanual{\printedrefname}{\printedmanual}
     \else
+      \xrefprintnodename%
       % _ (for example) has to be the character _ for the purposes of the
       % control sequence corresponding to the node, but it has to expand
       % into the usual \leavevmode...\vrule stuff for purposes of
@@ -7342,27 +7357,39 @@ end
        % Only output a following space if the -snt ref is nonempty; for
        % @unnumbered and @anchor, it won't be.
        \setbox2 = \hbox{\ignorespaces \refx{#1-snt}{}}%
-       \ifdim \wd2 > 0pt \refx{#1-snt}\space\fi
+       \ifdim \wd2 > 0pt \refx{#1-snt}\fi
       }%
       % output the `[mynode]' via a macro so it can be overridden.
-      \xrefprintnodename\printedrefname
+      {\printedrefname}%
       %
       % But we always want a comma and a space:
-      ,\space
+      %,\space
       %
       % output the `page 3'.
-      \turnoffactive \putwordpage\tie\refx{#1-pg}{}%
+      {\turnoffactive \putwordpage\tie\refx{#1-pg}{}}%
     \fi
   \fi
   \endlink
 \endgroup}
+
+% for localization hook point
+\def\xrefprintinmanual#1#2{\space \putwordin{} \cite{#1}}
+\def\xrefprintrefinmanual#1#2{\putwordSection{} ``#1'' \putwordin{} \cite{#2}}
 
 % This macro is called from \xrefX for the `[nodename]' part of xref
 % output.  It's a separate macro only so it can be changed more easily,
 % since square brackets don't work well in some documents.  Particularly
 % one that Bob is working on :).
 %
-\def\xrefprintnodename#1{[#1]}
+%\def\xrefprintnodename#1{[#1]}
+\def\xrefprintnodename#1#2#3{%
+  \def\temp{#1}%
+  \ifx\temp\empty
+  \else
+    #1\space
+  \fi
+  [#2],\space#3
+}
 
 % Things referred to by \setref.
 %
