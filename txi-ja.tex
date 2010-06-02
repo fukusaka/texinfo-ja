@@ -25,6 +25,9 @@
 %%      for texinfo.tex 2005-01-30.17
 %%      omitted support for old NTT-jTeX/MulTex
 %%      improve macros
+%% 2010.06.03 modified by Shoichi Fukusaka <fukusaka@xa2.so-net.ne.jp>
+%%      for texinfo.tex 2010-05.22.17 modified version
+%%      minimize re-define macro
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 92.7.8 by K.Handa
 \newif\ifNTT
@@ -64,7 +67,7 @@
 \gdef\putwordpage{p.\gobble}
 \gdef\putwordsection{節}
 \gdef\putwordSection{節}
-\gdef\putwordsee{参照}
+\gdef\putwordsee{を参照}
 \gdef\putwordSee{を参照してください}
 \gdef\putwordShortTOC{簡略目次}
 \gdef\putwordTOC{目次}
@@ -248,77 +251,17 @@
 %  1. ヘッドの章の表記
 %  2. See 訳語に合わせて動詞の後置
 %  3. クロスレファレンスの表記
+%  4. @dfn の表記
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  3. クロスレファレンスの表記
 %  1. ヘッドの章の表記
-\global\def\thischapterspace{\hskip \SETthischapterspace em}
+\gdef\thischapterspace{\hskip \SETthischapterspace em}
 \set thischapterspace 1
 
-\global\def\chapmacro#1#2#3{%
-  \pchapsepmacro
-  {%
-    \chapfonts \rm
-    %
-    % Have to define \thissection before calling \donoderef, because the
-    % xref code eventually uses it.  On the other hand, it has to be called
-    % after \pchapsepmacro, or the headline will change too soon.
-    \gdef\thissection{#1}%
-    \gdef\thischaptername{#1}%
-    %
-    % Only insert the separating space if we have a chapter/appendix
-    % number, and don't print the unnumbered ``number''.
-    \def\temptype{#2}%
-    \ifx\temptype\Ynothingkeyword
-      \setbox0 = \hbox{}%
-      \def\toctype{unnchap}%
-      \gdef\thischapter{#1}%
-    \else\ifx\temptype\Yomitfromtockeyword
-      \setbox0 = \hbox{}% contents like unnumbered, but no toc entry
-      \def\toctype{omit}%
-      \gdef\thischapter{}%
-    \else\ifx\temptype\Yappendixkeyword
-      \setbox0 = \hbox{\putwordAppendix{} #3\enspace}%
-      \def\toctype{app}%
-      % We don't substitute the actual chapter name into \thischapter
-      % because we don't want its macros evaluated now.  And we don't
-      % use \thissection because that changes with each section.
-      %
-      %\xdef\thischapter{\putwordAppendix{} \appendixletter:
-      %                  \noexpand\thischaptername}%
-      \xdef\thischapter{\putwordAppendix{}\appendixletter\thischapterspace
-                        \noexpand\thischaptername}%
-    \else
-      \setbox0 = \hbox{#3\enspace}%
-      \def\toctype{numchap}%
-      %\xdef\thischapter{\putwordChapter{} \the\chapno:
-      %                  \noexpand\thischaptername}%
-      \xdef\thischapter{第\the\chapno\putwordChapter{}\thischapterspace
-                        \noexpand\thischaptername}%
-    \fi\fi\fi
-    %
-    % Write the toc entry for this chapter.  Must come before the
-    % \donoderef, because we include the current node name in the toc
-    % entry, and \donoderef resets it to empty.
-    \writetocentry{\toctype}{#1}{#3}%
-    %
-    % For pdftex, we have to write out the node definition (aka, make
-    % the pdfdest) after any page break, but before the actual text has
-    % been typeset.  If the destination for the pdf outline is after the
-    % text, then jumping from the outline may wind up with the text not
-    % being visible, for instance under high magnification.
-    \donoderef{#2}%
-    %
-    % Typeset the actual heading.
-    \vbox{\hyphenpenalty=10000 \tolerance=5000 \parindent=0pt \raggedright
-          \hangindent=\wd0 \centerparametersmaybe
-          \unhbox0 #1\par}%
-  }%
-  \nobreak\bigskip % no page break after a chapter title
-  \nobreak
-}
+\gdef\printheadingappendix#1#2{\putwordAppendix{}#1\thischapterspace#2}
+\gdef\printheadingchapter#1#2{第#1\putwordChapter{}\thischapterspace#2}
 
-\global\def\Ynumbered{%
+\gdef\Ynumbered{%
   \ifnum\secno=0
     第\the\chapno\putwordChapter%
   \else \ifnum\subsecno=0
@@ -330,7 +273,7 @@
   \fi\fi\fi
 }
 
-\global\def\Yappendix{%
+\gdef\Yappendix{%
   \ifnum\secno=0
      \putwordAppendix@tie @char\the\appendixno{}%
   \else \ifnum\subsecno=0
@@ -353,119 +296,12 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  3. クロスレファレンスの表記
 
-\global\def\xrefX[#1,#2,#3,#4,#5,#6]{\begingroup
-  \unsepspaces
-  \def\printedmanual{\ignorespaces #5}%
-  \def\printedrefname{\ignorespaces #3}%
-  \setbox1=\hbox{\printedmanual\unskip}%
-  \setbox0=\hbox{\printedrefname\unskip}%
-  \ifdim \wd0 = 0pt
-    % No printed node name was explicitly given.
-    \expandafter\ifx\csname SETxref-automatic-section-title\endcsname\relax
-      % Use the node name inside the square brackets.
-      \def\printedrefname{\ignorespaces #1}%
-    \else
-      % Use the actual chapter/section title appear inside
-      % the square brackets.  Use the real section title if we have it.
-      \ifdim \wd1 > 0pt
-        % It is in another manual, so we don't have it.
-        \def\printedrefname{\ignorespaces #1}%
-      \else
-        \ifhavexrefs
-          % We know the real title if we have the xref values.
-          \def\printedrefname{\refx{#1-title}{}}%
-        \else
-          % Otherwise just copy the Info node name.
-          \def\printedrefname{\ignorespaces #1}%
-        \fi%
-      \fi
-    \fi
-  \fi
-  %
-  % Make link in pdf output.
-  \ifpdf
-    \leavevmode
-    \getfilename{#4}%
-    {\turnoffactive \otherbackslash
-     \ifnum\filenamelength>0
-       \startlink attr{/Border [0 0 0]}%
-         goto file{\the\filename.pdf} name{#1}%
-     \else
-       \startlink attr{/Border [0 0 0]}%
-         goto name{\pdfmkpgn{#1}}%
-     \fi
-    }%
-    \linkcolor
-  \fi
-  %
-  % Float references are printed completely differently: "Figure 1.2"
-  % instead of "[somenode], p.3".  We distinguish them by the
-  % LABEL-title being set to a magic string.
-  {%
-    % Have to otherify everything special to allow the \csname to
-    % include an _ in the xref name, etc.
-    \indexnofonts
-    \turnoffactive
-    \otherbackslash
-    \expandafter\global\expandafter\let\expandafter\Xthisreftitle
-      \csname XR#1-title\endcsname
-  }%
-  \iffloat\Xthisreftitle
-    % If the user specified the print name (third arg) to the ref,
-    % print it instead of our usual "Figure 1.2".
-    \ifdim\wd0 = 0pt
-      \refx{#1-snt}%
-    \else
-      \printedrefname
-    \fi
-    %
-    % if the user also gave the printed manual name (fifth arg), append
-    % "in MANUALNAME".
-    \ifdim \wd1 > 0pt
-      \space \putwordin{} \cite{\printedmanual}%
-    \fi
-  \else
-    % node/anchor (non-float) references.
-    %
-    % If we use \unhbox0 and \unhbox1 to print the node names, TeX does not
-    % insert empty discretionaries after hyphens, which means that it will
-    % not find a line break at a hyphen in a node names.  Since some manuals
-    % are best written with fairly long node names, containing hyphens, this
-    % is a loss.  Therefore, we give the text of the node name again, so it
-    % is as if TeX is seeing it for the first time.
-    \ifdim \wd1 > 0pt
-       %\putwordsection{} ``\printedrefname'' \putwordin{} \cite{\printedmanual}%
-       \cite{\printedmanual}の``\printednodename''\putwordsection{}%
-    \else
-      % _ (for example) has to be the character _ for the purposes of the
-      % control sequence corresponding to the node, but it has to expand
-      % into the usual \leavevmode...\vrule stuff for purposes of
-      % printing. So we \turnoffactive for the \refx-snt, back on for the
-      % printing, back off for the \refx-pg.
-      {\turnoffactive \otherbackslash
-       % Only output a following space if the -snt ref is nonempty; for
-       % @unnumbered and @anchor, it won't be.
-       \setbox2 = \hbox{\ignorespaces \refx{#1-snt}{}}%
-       %\ifdim \wd2 > 0pt \refx{#1-snt}\space\fi
-       \ifdim \wd2 > 0pt \refx{#1-snt}\fi
-      }%
-      % output the `[mynode]' via a macro so it can be overridden.
-      \xrefprintnodename\printedrefname
-      %
-      % But we always want a comma and a space:
-      %,\space
-      %
-      % output the `page 3'.
-      \turnoffactive \otherbackslash \putwordpage\tie\refx{#1-pg}{}%
-    \fi
-  \fi
-  \endlink
-\endgroup}
-
-\global\def\xrefprintnodename#1{「#1」}
+\global\def\xrefprintinmanual#1#2{\space \putwordin{} \cite{#1}}
+\global\def\xrefprintrefinmanual#1#2{\cite{#2}の``#1''\putwordsection{}}
+\global\def\xrefprintnodename#1#2#3{\def\temp{#1}\ifx\empty\temp\else#1\fi「#2」#3}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% @dfn
+%  4. @dfn の表記
+
 \global\def\doublebracket#1{『#1』}
 \global\let\dfn=\doublebracket
-
